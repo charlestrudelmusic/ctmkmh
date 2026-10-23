@@ -235,8 +235,9 @@ input[type=range]{accent-color:var(--tab)}
       <div class="ask" style="margin-bottom:10px;font-size:.88rem">
         <div class="seg" id="r-orient"><button data-o="v">▮ Verticales</button><button data-o="h">▬ Horizontales</button></div>
         <div class="seg" id="r-order"><button data-r="asc">Lent → rapide</button><button data-r="desc">Rapide → lent</button></div>
+        <span style="display:inline-flex;align-items:center;gap:8px">Gain comparé au <div class="seg" id="r-ref"><button data-f="prev">palier d’avant</button><button data-f="base">plus lent</button></div></span>
       </div>
-      <div class="hint">Chaque barre = la durée du trajet à cette vitesse. La partie hachurée = le temps gagné par rapport au palier plus lent. Touchez une barre pour le détail.</div>
+      <div class="hint">Chaque barre = la durée du trajet à cette vitesse. La partie hachurée = le temps gagné. Touchez une barre pour le détail.</div>
       <div class="chart fit" id="r-chart"></div>
     </div>
   </section>
@@ -412,15 +413,18 @@ $('#r-to').oninput=e=>{S.pal.to=Math.max(0,+e.target.value||0);rSel=null;renderR
 $$('#r-step button').forEach(b=>b.onclick=()=>{S.pal.step=+b.dataset.s;rSel=null;renderRend();save();});
 $$('#r-orient button').forEach(b=>b.onclick=()=>{S.pal.orient=b.dataset.o;renderRend();save();});
 $$('#r-order button').forEach(b=>b.onclick=()=>{S.pal.order=b.dataset.r;renderRend();save();});
+$$('#r-ref button').forEach(b=>b.onclick=()=>{S.pal.ref=b.dataset.f;renderRend();save();});
 $('#r-chart').addEventListener('click',e=>{const h=e.target.closest('[data-bi]');if(!h)return;const i=+h.dataset.bi;rSel=rSel===i?null:i;renderRend();});
 let rW=0;window.addEventListener('resize',()=>{const w=$('#r-chart').clientWidth;if(w&&Math.abs(w-rW)>20)renderRend();});
 function renderRend(){
   const P=S.pal;
-  if(!P.orient)P.orient=innerWidth<640?'h':'v';if(!P.order)P.order='asc';
+  if(!P.orient)P.orient=innerWidth<640?'h':'v';if(!P.order)P.order='asc';if(!P.ref)P.ref='prev';
   [['r-dist',S.rd],['r-from',P.from],['r-to',P.to]].forEach(([id,v])=>{const el=$('#'+id);if(document.activeElement!==el)el.value=v;});
   $$('#r-step button').forEach(b=>b.classList.toggle('on',+b.dataset.s===P.step));
   $$('#r-orient button').forEach(b=>b.classList.toggle('on',b.dataset.o===P.orient));
   $$('#r-order button').forEach(b=>b.classList.toggle('on',b.dataset.r===P.order));
+  $$('#r-ref button').forEach(b=>b.classList.toggle('on',b.dataset.f===P.ref));
+  const ri=i=>P.ref==='base'?0:i-1;
   const d=S.rd,from=Math.max(1,P.from||1),to=P.to;
   const vs=[];for(let v=from;v<=to+1e-9&&vs.length<30;v+=P.step)vs.push(v);
   const V=$('#r-verdict'),box=$('#r-chart');
@@ -440,7 +444,7 @@ function renderRend(){
     g+=`<text class="tk" x="${L-6}" y="${T-16}" text-anchor="end" style="font-weight:700">Durée ↑</text><text class="tk" x="${W-R}" y="${H-4}" text-anchor="end" style="font-weight:700">Vitesse (km/h) →</text>`;
     order.forEach((i,k)=>{const v=vs[i],x=L+k*bw+bw*.14,w=bw*.72,y=Y(t(v)/U),sel=rSel===i,dim=rSel!==null&&!sel;
       g+=`<g opacity="${dim?.45:1}"><rect x="${x}" y="${y}" width="${w}" height="${Y(0)-y}" rx="5" fill="var(--t2)" ${sel?'stroke="var(--fg)" stroke-width="2.5"':''}/>`;
-      if(i>0){const yp=Y(t(vs[i-1])/U),lab='−'+fT(t(vs[i-1])-t(v));
+      if(i>0){const yp=Y(t(vs[ri(i)])/U),lab='−'+fT(t(vs[ri(i)])-t(v));
         g+=`<rect x="${x}" y="${yp}" width="${w}" height="${Math.max(0,y-yp)}" fill="url(#hatch)" stroke="var(--t2)" stroke-width="1"/>`;
         if(tw(lab)*(fs/11)<=bw-2||sel)g+=`<text class="lb" x="${x+w/2}" y="${yp-6}" text-anchor="middle" style="fill:var(--t2);font-size:${fs}px">${lab}</text>`;}
       const tl=fT(t(v));if(Y(0)-y>30&&tw(tl)*(fs/11)<=w-4)g+=`<text x="${x+w/2}" y="${Y(0)-10}" text-anchor="middle" style="fill:#fff;font-weight:800;font-size:${fs}px;font-family:var(--f-body)">${tl}</text>`;
@@ -448,7 +452,7 @@ function renderRend(){
         <rect class="bar-hit" data-bi="${i}" x="${L+k*bw}" y="${T}" width="${bw}" height="${ph+24}" fill="transparent"/>`;});
     g+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}"/>`;
   }else{
-    const L=58,R=W<500?70:96,T=30,B=34,rh=Math.max(24,Math.min(34,300/n));H=T+n*rh+B;
+    const L=58,R=W<500?(P.ref==='base'?96:70):(P.ref==='base'?124:96),T=30,B=34,rh=Math.max(24,Math.min(34,300/n));H=T+n*rh+B;
     const pw=W-L-R,st=niceStep(ym,W<500?3:5),xMax=Math.ceil(ym/st)*st,X=x=>L+x/xMax*pw;
     for(let x=0;x<=xMax+1e-9;x+=st)g+=`<line class="gl" x1="${X(x)}" x2="${X(x)}" y1="${T-4}" y2="${H-B}"/><text class="tk" x="${X(x)}" y="${H-B+16}" text-anchor="middle">${yf(x)}</text>`;
     g+=`<text class="tk" x="${L-8}" y="${T-12}" text-anchor="end" style="font-weight:700">km/h</text><text class="tk" x="${W-R}" y="${H-2}" text-anchor="end" style="font-weight:700">Durée →</text>`;
@@ -457,8 +461,8 @@ function renderRend(){
         <rect x="${L}" y="${y}" width="${x1-L}" height="${h}" rx="5" fill="var(--t2)" ${sel?'stroke="var(--fg)" stroke-width="2.5"':''}/>`;
       const tl=fT(t(v));if(tw(tl)<=x1-L-12)g+=`<text x="${L+8}" y="${y+h/2+4}" style="fill:#fff;font-weight:800;font-size:11px;font-family:var(--f-body)">${tl}</text>`;
       let xe=x1;
-      if(i>0){const xp=X(t(vs[i-1])/U);xe=xp;g+=`<rect x="${x1}" y="${y}" width="${Math.max(0,xp-x1)}" height="${h}" fill="url(#hatch)" stroke="var(--t2)" stroke-width="1"/>`;}
-      g+=`<text class="lb" x="${xe+6}" y="${y+h/2+4}" style="fill:var(--t2);font-size:11px">${i>0?'−'+fT(t(vs[i-1])-t(v)):(tw(tl)<=x1-L-12?'':tl)}</text></g>
+      if(i>0){const xp=X(t(vs[ri(i)])/U);xe=xp;g+=`<rect x="${x1}" y="${y}" width="${Math.max(0,xp-x1)}" height="${h}" fill="url(#hatch)" stroke="var(--t2)" stroke-width="1"/>`;}
+      g+=`<text class="lb" x="${xe+6}" y="${y+h/2+4}" style="fill:var(--t2);font-size:11px">${i>0?'−'+fT(t(vs[ri(i)])-t(v))+(P.ref==='base'?' vs '+vs[0]:''):(tw(tl)<=x1-L-12?'':P.ref==='base'?'référence':tl)}</text></g>
         <rect class="bar-hit" data-bi="${i}" x="0" y="${T+k*rh}" width="${W}" height="${rh}" fill="transparent"/>`;});
     g+=`<line class="ax" x1="${L}" x2="${L}" y1="${T-4}" y2="${H-B}"/>`;
   }
@@ -468,7 +472,8 @@ function renderRend(){
     if(rSel===0)V.innerHTML=`À <b>${v} km/h</b>, ${fD(d)} prennent <b>${fT(t(v))}</b>.<span class="sub">C’est la vitesse de départ. Touchez une autre barre pour voir ce que rapporte le palier.</span>`;
     else{const pv=vs[rSel-1],gg=t(pv)-t(v);
       V.innerHTML=`À <b>${v} km/h</b>, ${fD(d)} prennent <b>${fT(t(v))}</b>. Monter de ${pv} à ${v} km/h fait gagner <b>${fT(gg)}</b>.<span class="sub">Soit ${fT(gg/P.step)} par km/h ajouté. Depuis ${from} km/h, vous avez gagné ${fT(t(from)-t(v))} au total.</span>`;}
-  }else V.innerHTML=`Sur ${fD(d)}, monter de ${vs[0]} à ${vs[1]} km/h fait gagner <b>${fT(g0)}</b>. Monter de ${vs[n-2]} à ${vs[n-1]} km/h ne fait gagner que <b>${fT(gl)}</b>.<span class="sub">Même +${P.step} km/h, ${nf(g0/gl,1)} fois moins de temps gagné.</span>`;
+  }else if(P.ref==='base')V.innerHTML=`Sur ${fD(d)}, rouler à ${vs[n-1]} km/h plutôt qu’à ${vs[0]} km/h fait gagner <b>${fT(t(vs[0])-t(vs[n-1]))}</b> au total.<span class="sub">La moitié de ce gain est déjà acquise à ${nf(2*vs[0]*vs[n-1]/(vs[0]+vs[n-1]))} km/h : les derniers km/h rapportent le moins.</span>`;
+  else V.innerHTML=`Sur ${fD(d)}, monter de ${vs[0]} à ${vs[1]} km/h fait gagner <b>${fT(g0)}</b>. Monter de ${vs[n-2]} à ${vs[n-1]} km/h ne fait gagner que <b>${fT(gl)}</b>.<span class="sub">Même +${P.step} km/h, ${nf(g0/gl,1)} fois moins de temps gagné.</span>`;
 }
 
 /* ---------- 3. Moyenne ---------- */
