@@ -42,7 +42,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .app{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1,h2{font-family:var(--f-display);margin:0;letter-spacing:-.015em;text-wrap:balance}
 p{margin:0}
-button{font:inherit;color:inherit;cursor:pointer}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--tab,var(--t1));outline-offset:2px}
 
 /* Barre du haut */
@@ -75,7 +75,8 @@ button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid va
 .num input:focus{outline:none}
 .num span{color:var(--muted);font-weight:600;font-size:.88rem}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.seg{display:inline-flex;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:12px;gap:2px;flex-wrap:wrap}
+.seg{display:inline-flex;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:12px;gap:2px;flex-wrap:nowrap;max-width:100%}
+.seg button{white-space:nowrap}
 .seg button{border:0;background:transparent;padding:6px 12px;border-radius:9px;font-weight:700;font-size:.86rem;color:var(--muted)}
 .seg button.on{background:var(--tab);color:#fff}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button.on{color:#0c0f15}}
@@ -176,13 +177,18 @@ input[type=range]{accent-color:var(--tab)}
   .head{padding:16px}
   .head h1{font-size:1.3rem}
   .stage{padding:14px}
-  .lane,.blane{grid-template-columns:auto minmax(0,1fr) 28px}
-  .lane .val,.blane .val{grid-column:2;grid-row:2}
-  .lane .sctl,.blane .sctl{grid-row:span 2}
-  .ruler-row{grid-template-columns:auto minmax(0,1fr) 28px}
-  .ruler-row>.ghost.v{display:none}
-  .sb{display:none}
-  .ring{width:46px;height:46px}
+  .lanes{gap:20px}
+  .lane,.blane{grid-template-columns:auto minmax(0,1fr) 32px;grid-template-areas:"ctl val rm" "road road road";row-gap:10px;column-gap:10px}
+  .lane>.sctl,.blane>.sctl{grid-area:ctl}
+  .lane>.val,.blane>.val{grid-area:val}
+  .lane>.road,.blane>.btrack{grid-area:road}
+  .lane>:last-child,.blane>:last-child{grid-area:rm}
+  .ruler-row{grid-template-columns:minmax(0,1fr)}
+  .ruler-row>:not(.ruler){display:none}
+  .sb{width:40px;height:40px;font-size:1.25rem}
+  .sctl{gap:6px}
+  .ring{width:54px;height:54px}
+  .seg button{padding:6px 10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -206,8 +212,8 @@ input[type=range]{accent-color:var(--tab)}
       <h1>Qui arrive en premier, <em>et avec combien d’avance ?</em></h1>
       <div class="ask">
         <div class="seg" id="c-mode"><button data-m="dist">Même distance</button><button data-m="temps">Même temps</button></div>
-        <span id="c-dist-wrap">sur <label class="num"><input id="c-dist" type="number" min="0.1" step="1" inputmode="decimal"><span>km</span></label></span>
-        <span id="c-dur-wrap">pendant <label class="num"><input id="c-dur" type="number" min="1" step="5" inputmode="numeric"><span>min</span></label></span>
+        <span id="c-dist-wrap">sur <label class="num"><input id="c-dist" type="text" inputmode="decimal" autocomplete="off"><span>km</span></label></span>
+        <span id="c-dur-wrap">pendant <label class="num"><input id="c-dur" type="text" inputmode="numeric" autocomplete="off"><span>min</span></label></span>
       </div>
       <p class="verdict" id="c-verdict"></p>
     </div>
@@ -225,9 +231,9 @@ input[type=range]{accent-color:var(--tab)}
   <section class="scene" id="p-rendement" style="--tab:var(--t2)" hidden>
     <div class="head">
       <h1>Chaque palier de vitesse fait gagner <em>de moins en moins de temps</em></h1>
-      <div class="ask">Trajet de <label class="num"><input id="r-dist" type="number" min="0.1" step="1" inputmode="decimal"><span>km</span></label>
-        de <label class="num"><input id="r-from" type="number" min="5" step="10" inputmode="numeric"><span>km/h</span></label>
-        à <label class="num"><input id="r-to" type="number" min="10" step="10" inputmode="numeric"><span>km/h</span></label>
+      <div class="ask">Trajet de <label class="num"><input id="r-dist" type="text" inputmode="decimal" autocomplete="off"><span>km</span></label>
+        de <label class="num"><input id="r-from" type="text" inputmode="numeric" autocomplete="off"><span>km/h</span></label>
+        à <label class="num"><input id="r-to" type="text" inputmode="numeric" autocomplete="off"><span>km/h</span></label>
         par paliers de <div class="seg" id="r-step"><button data-s="5">+5 km/h</button><button data-s="10">+10 km/h</button><button data-s="20">+20 km/h</button></div></div>
       <p class="verdict" id="r-verdict"></p>
     </div>
@@ -235,7 +241,7 @@ input[type=range]{accent-color:var(--tab)}
       <div class="ask" style="margin-bottom:10px;font-size:.88rem">
         <div class="seg" id="r-orient"><button data-o="v">▮ Verticales</button><button data-o="h">▬ Horizontales</button></div>
         <div class="seg" id="r-order"><button data-r="asc">Lent → rapide</button><button data-r="desc">Rapide → lent</button></div>
-        <span style="display:inline-flex;align-items:center;gap:8px">Gain comparé au <div class="seg" id="r-ref"><button data-f="prev">palier d’avant</button><button data-f="base">plus lent</button></div></span>
+        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Gain comparé au <div class="seg" id="r-ref"><button data-f="prev">palier d’avant</button><button data-f="base">plus lent</button></div></span>
       </div>
       <div class="hint">Chaque barre = la durée du trajet à cette vitesse. La partie hachurée = le temps gagné. Touchez une barre pour le détail.</div>
       <div class="chart fit" id="r-chart"></div>
@@ -251,7 +257,7 @@ input[type=range]{accent-color:var(--tab)}
     </div>
     <div class="stage">
       <div class="hint">↕ Glissez un bloc vers le haut ou le bas pour changer sa vitesse. La surface d’un bloc = sa distance.</div>
-      <div class="chart" id="m-chart"></div>
+      <div class="chart fit" id="m-chart"></div><div class="legend" id="m-legend" hidden></div>
       <div class="segs" id="m-segs"></div>
       <button class="addv" id="m-add" style="margin-top:10px">+ Ajouter un tronçon</button>
     </div>
@@ -264,7 +270,7 @@ input[type=range]{accent-color:var(--tab)}
       <div class="ask">
         <div class="seg" id="f-a"><button data-a="7">Sèche</button><button data-a="5">Mouillée</button><button data-a="3">Neige</button><button data-a="1.5">Glace</button></div>
         <span style="display:inline-flex;align-items:center;gap:8px">Réaction <input id="f-tr" type="range" min="0.5" max="2.5" step="0.1" style="width:110px" aria-label="Temps de réaction"> <b id="f-trv"></b></span>
-        <span>Obstacle à <label class="num"><input id="f-obs" type="number" min="1" step="5" inputmode="numeric"><span>m</span></label></span>
+        <span>Obstacle à <label class="num"><input id="f-obs" type="text" inputmode="numeric" autocomplete="off"><span>m</span></label></span>
       </div>
       <p class="verdict" id="f-verdict"></p>
     </div>
@@ -296,6 +302,7 @@ function fT(sec){
   if(sec>=3600){const tm=Math.round(sec/60),h=Math.floor(tm/60),m=tm%60;return h+' h'+(m?' '+String(m).padStart(2,'0'):'');}
   const s=Math.round(sec),m=Math.floor(s/60),r=s%60;return r?m+' min '+String(r).padStart(2,'0'):m+' min';
 }
+const pn=x=>Math.max(0,parseFloat(String(x).replace(',','.'))||0),fv=x=>String(x).replace('.',',');
 const fD=km=>km<1?nf(km*1000)+' m':nf(km,km<10?2:1)+' km';
 const valid=()=>S.speeds.map((s,i)=>({...s,i})).filter(s=>s.v>0);
 const sorted=()=>valid().sort((a,b)=>a.v-b.v);
@@ -311,12 +318,7 @@ const speedCtl=(s,i)=>`<div class="sctl" style="--c:${s.c}">
 const rmBtn=i=>S.speeds.length>1?`<button class="rmv" data-i="${i}" aria-label="Retirer cette vitesse">×</button>`:'<span></span>';
 const addBtn=()=>S.speeds.length<6?`<button class="addv" data-addv>+ Ajouter une vitesse</button>`:'';
 
-function rerender(){
-  const f=document.activeElement;let keep=null;
-  if(f&&f.classList.contains('vin'))keep={p:f.closest('section').id,i:f.dataset.i,c:f.selectionStart};
-  renderAll();
-  if(keep){const el=document.querySelector(`#${keep.p} .vin[data-i="${keep.i}"]`);if(el){el.focus();try{el.setSelectionRange(keep.c,keep.c);}catch(e){}}}
-}
+function rerender(){renderAll();}
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.classList.contains('vin')){t.value=t.value.replace(/\D/g,'');S.speeds[+t.dataset.i].v=Math.min(400,Math.max(0,Math.round(+t.value||0)));tau=null;rerender();}
@@ -337,8 +339,8 @@ document.addEventListener('click',e=>{
 /* ---------- 1. Course ---------- */
 let tau=null,anim=null;
 $$('#c-mode button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;tau=null;renderAll();});
-$('#c-dist').oninput=e=>{S.dist=Math.max(0,+e.target.value||0);tau=null;renderCourse(true);save();};
-$('#c-dur').oninput=e=>{S.dur=Math.max(0,+e.target.value||0);tau=null;renderCourse(true);save();};
+$('#c-dist').oninput=e=>{S.dist=pn(e.target.value);tau=null;renderCourse(true);save();};
+$('#c-dur').oninput=e=>{S.dur=pn(e.target.value);tau=null;renderCourse(true);save();};
 function raceInfo(){
   const v=valid();if(!v.length||!(S.mode==='dist'?S.dist:S.dur))return null;
   if(S.mode==='dist'){const t={};v.forEach(s=>t[s.i]=S.dist/s.v*3600);const ts=Object.values(t);return{v,t,end:Math.max(...ts),rest:Math.min(...ts)};}
@@ -347,9 +349,11 @@ function raceInfo(){
 function renderCourse(keepLanes){
   $$('#c-mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));
   $('#c-dist-wrap').hidden=S.mode!=='dist';$('#c-dur-wrap').hidden=S.mode!=='temps';
-  if(document.activeElement!==$('#c-dist'))$('#c-dist').value=S.dist;
+  if(document.activeElement!==$('#c-dist'))$('#c-dist').value=fv(S.dist);
   if(document.activeElement!==$('#c-dur'))$('#c-dur').value=S.dur;
-  if(!keepLanes){
+  const ckey=S.mode+'|'+S.speeds.map(x=>x.c).join();
+  if($('#c-lanes').dataset.key!==ckey){
+    $('#c-lanes').dataset.key=ckey;
     $('#c-lanes').innerHTML=S.speeds.map((s,i)=>`<div class="lane" style="--c:${s.c}">${speedCtl(s,i)}
       <div class="road"><div class="trail" id="ct${i}"></div><div class="car" id="cc${i}"></div>${S.mode==='dist'?'<div class="finish"></div>':''}</div>
       <div class="val"><b id="cv${i}">—</b><small id="cs${i}"></small></div>${rmBtn(i)}</div>`).join('')+addBtn();
@@ -364,7 +368,7 @@ function renderCourse(keepLanes){
   if(S.mode==='dist'){
     const t=v=>S.dist/v*3600;
     let sub='';
-    if(s.length>=3){const a=s[0],b=s[1],c=s[s.length-2],d=s[s.length-1];
+    const u=s.filter((x,k)=>!k||x.v!==s[k-1].v);if(u.length>=3){const a=u[0],b=u[1],c=u[u.length-2],d=u[u.length-1];
       sub=`De ${a.v} à ${b.v} km/h : −${fT(t(a.v)-t(b.v))}. De ${c.v} à ${d.v} km/h : −${fT(t(c.v)-t(d.v))}.`;}
     V.innerHTML=`Le <b>${hi.v} km/h</b> arrive <b>${fT(t(lo.v)-t(hi.v))}</b> avant le ${lo.v} km/h. Quand il franchit la ligne, le ${lo.v} km/h n’a fait que <b>${Math.round(lo.v/hi.v*100)} %</b> du trajet.<span class="sub">${sub}</span>`;
   }else{
@@ -372,8 +376,9 @@ function renderCourse(keepLanes){
     V.innerHTML=`En ${fT(S.dur*60)}, le <b>${hi.v} km/h</b> parcourt <b>${fD(d(hi.v)-d(lo.v))}</b> de plus que le ${lo.v} km/h.<span class="sub">À temps égal, chaque km/h ajoute toujours la même distance (${fD(S.dur/60)}). C’est à distance égale que les gains de temps fondent.</span>`;
   }
 }
+function syncRings(box){box.querySelectorAll('.vin').forEach(el=>{const s=S.speeds[+el.dataset.i];if(s&&document.activeElement!==el)el.value=s.v||'';});}
 function updateRace(){
-  const R=raceInfo();
+  const R=raceInfo();syncRings($('#c-lanes'));
   S.speeds.forEach((s,i)=>{
     const tr=$('#ct'+i),car=$('#cc'+i),v=$('#cv'+i),sub=$('#cs'+i);if(!tr)return;
     if(!R||!(s.v>0)){tr.style.width='0';car.style.left='0';v.textContent='—';sub.textContent='';return;}
@@ -407,19 +412,19 @@ $('#c-play').onclick=()=>{
 
 /* ---------- 2. Paliers ---------- */
 let rSel=null;
-$('#r-dist').oninput=e=>{S.rd=Math.max(0,+e.target.value||0);renderRend();save();};
-$('#r-from').oninput=e=>{S.pal.from=Math.max(0,+e.target.value||0);rSel=null;renderRend();save();};
-$('#r-to').oninput=e=>{S.pal.to=Math.max(0,+e.target.value||0);rSel=null;renderRend();save();};
+$('#r-dist').oninput=e=>{S.rd=pn(e.target.value);renderRend();save();};
+$('#r-from').oninput=e=>{S.pal.from=pn(e.target.value);rSel=null;renderRend();save();};
+$('#r-to').oninput=e=>{S.pal.to=pn(e.target.value);rSel=null;renderRend();save();};
 $$('#r-step button').forEach(b=>b.onclick=()=>{S.pal.step=+b.dataset.s;rSel=null;renderRend();save();});
 $$('#r-orient button').forEach(b=>b.onclick=()=>{S.pal.orient=b.dataset.o;renderRend();save();});
 $$('#r-order button').forEach(b=>b.onclick=()=>{S.pal.order=b.dataset.r;renderRend();save();});
 $$('#r-ref button').forEach(b=>b.onclick=()=>{S.pal.ref=b.dataset.f;renderRend();save();});
 $('#r-chart').addEventListener('click',e=>{const h=e.target.closest('[data-bi]');if(!h)return;const i=+h.dataset.bi;rSel=rSel===i?null:i;renderRend();});
-let rW=0;window.addEventListener('resize',()=>{const w=$('#r-chart').clientWidth;if(w&&Math.abs(w-rW)>20)renderRend();});
+let rW=0;window.addEventListener('resize',()=>{const w=$('#r-chart').clientWidth;if(w&&Math.abs(w-rW)>20)renderRend();const m=$('#m-chart').clientWidth;if(m&&Math.abs(m-MW)>20)renderMoy();});
 function renderRend(){
   const P=S.pal;
   if(!P.orient)P.orient=innerWidth<640?'h':'v';if(!P.order)P.order='asc';if(!P.ref)P.ref='prev';
-  [['r-dist',S.rd],['r-from',P.from],['r-to',P.to]].forEach(([id,v])=>{const el=$('#'+id);if(document.activeElement!==el)el.value=v;});
+  [['r-dist',S.rd],['r-from',P.from],['r-to',P.to]].forEach(([id,v])=>{const el=$('#'+id);if(document.activeElement!==el)el.value=fv(v);});
   $$('#r-step button').forEach(b=>b.classList.toggle('on',+b.dataset.s===P.step));
   $$('#r-orient button').forEach(b=>b.classList.toggle('on',b.dataset.o===P.orient));
   $$('#r-order button').forEach(b=>b.classList.toggle('on',b.dataset.r===P.order));
@@ -477,16 +482,18 @@ function renderRend(){
 }
 
 /* ---------- 3. Moyenne ---------- */
-const MW=680,MH=330,ML=56,MR=150,MT=24,MB=44;
+let MW=680,MH=330,ML=56,MR=150,MT=24,MB=44;
 let mScale=null,mDrag=null,mSel=0;
 $$('[data-pre]').forEach(b=>b.onclick=()=>{S.segs=JSON.parse(JSON.stringify(PRE[b.dataset.pre]));$('#m-segs').innerHTML='';renderMoy();save();});
 $('#m-add').onclick=()=>{if(S.segs.length>=6)return;S.segs.push({n:'Tronçon '+(S.segs.length+1),d:10,v:70});mSel=S.segs.length-1;$('#m-segs').innerHTML='';renderMoy();save();};
-$('#m-segs').addEventListener('input',e=>{const t=e.target;if(t.dataset.k===undefined)return;S.segs[+t.dataset.i][t.dataset.k]=Math.max(0,+t.value||0);renderMoy();save();});
+$('#m-segs').addEventListener('input',e=>{const t=e.target;if(t.dataset.k===undefined)return;S.segs[+t.dataset.i][t.dataset.k]=pn(t.value);renderMoy();save();});
 $('#m-segs').addEventListener('click',e=>{const b=e.target.closest('.rmseg');
   if(b){S.segs.splice(+b.dataset.i,1);mSel=null;$('#m-segs').innerHTML='';renderMoy();save();return;}
   const c=e.target.closest('.segcard');if(c){mSel=+c.dataset.i;renderMoy();}});
 $('#m-segs').addEventListener('focusin',e=>{const c=e.target.closest('.segcard');if(c&&mSel!==+c.dataset.i){mSel=+c.dataset.i;renderMoy();}});
 function renderMoy(){
+  if(mDrag===null){const cw=$('#m-chart').clientWidth||680;MW=Math.max(320,Math.min(900,cw));MR=MW<560?14:150;MH=MW<560?280:330;ML=MW<560?40:56;}
+  const narrow=MR<100;
   const segs=S.segs,ok=segs.map(g=>g.d>0&&g.v>0);if(mSel!==null&&mSel>=segs.length)mSel=null;
   const times=segs.map((g,i)=>ok[i]?g.d/g.v*60:0),T=times.reduce((a,b)=>a+b,0),D=segs.reduce((a,g,i)=>a+(ok[i]?g.d:0),0);
   const real=T?D/(T/60):0,used=segs.filter((g,i)=>ok[i]),naive=used.length?used.reduce((a,g)=>a+g.v,0)/used.length:0;
@@ -504,19 +511,22 @@ function renderMoy(){
       ${w>30?`<text class="lb" x="${x0+w/2+1}" y="${y-9}" text-anchor="middle">${s.v}</text>`:''}
       ${w>44?`<text class="tk" x="${x0+w/2+1}" y="${Y(0)+16}" text-anchor="middle">${fT(times[i]*60)}</text>`:''}</g>`;});
   const yr=Y(real),yn=Y(naive),far=Math.abs(yr-yn)<18;
-  const lines=T?`<line x1="${ML}" x2="${ML+pw+6}" y1="${yn}" y2="${yn}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/>
+  const lines=T&&!narrow?`<line x1="${ML}" x2="${ML+pw+6}" y1="${yn}" y2="${yn}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/>
     <text class="tk" x="${ML+pw+12}" y="${yn+(far&&yn<yr?-6:4)+(far&&yn>=yr?10:0)}" style="font-weight:700">Moy. des vitesses ${nf(naive,1)} ✗</text>
     <line x1="${ML}" x2="${ML+pw+6}" y1="${yr}" y2="${yr}" stroke="var(--fg)" stroke-width="3"/>
     <text class="lb" x="${ML+pw+12}" y="${yr+(far&&yr<=yn?-6:4)+(far&&yr>yn?10:0)}" style="fill:var(--t3)">Vraie moyenne ${nf(real,1)}</text>`:'';
   $('#m-chart').innerHTML=`<svg viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Vitesse en fonction du temps">${g}<line class="ax" x1="${ML}" x2="${ML+pw}" y1="${Y(0)}" y2="${Y(0)}"/>${blocks}${lines}</svg>`;
   mScale={xs,Y,yMax};
+  const lg=$('#m-legend');lg.hidden=!(narrow&&T);
+  if(narrow&&T){$('#m-chart svg').insertAdjacentHTML('beforeend',`<line x1="${ML}" x2="${ML+pw}" y1="${yn}" y2="${yn}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/><line x1="${ML}" x2="${ML+pw}" y1="${yr}" y2="${yr}" stroke="var(--fg)" stroke-width="3"/>`);
+    lg.innerHTML=`<span><i class="lg" style="height:3px;background:var(--fg)"></i><b style="color:var(--t3)">Vraie moyenne ${nf(real,1)} km/h</b></span><span><i class="lg" style="height:0;border-top:2px dashed var(--muted)"></i>Moy. des vitesses ${nf(naive,1)} ✗</span>`;}
   // liste
   const box=$('#m-segs');
   if(box.children.length!==segs.length){
     box.innerHTML=segs.map((g,i)=>`<div class="segcard" data-i="${i}" style="--c:${SEGC[i%6]}">
       <div class="sh"><i></i>${g.n||'Tronçon '+(i+1)}${segs.length>1?`<button class="rmv rmseg" data-i="${i}" aria-label="Retirer ce tronçon">×</button>`:''}</div>
-      <div class="ins"><label class="num"><input type="number" min="0" step="1" inputmode="decimal" data-i="${i}" data-k="d" value="${g.d}" aria-label="Distance"><span>km</span></label>
-        à <label class="num"><input type="number" min="1" step="10" inputmode="numeric" data-i="${i}" data-k="v" value="${g.v}" aria-label="Vitesse"><span>km/h</span></label></div>
+      <div class="ins"><label class="num"><input type="text" inputmode="decimal" autocomplete="off" data-i="${i}" data-k="d" value="${fv(g.d)}" aria-label="Distance"><span>km</span></label>
+        à <label class="num"><input type="text" inputmode="numeric" autocomplete="off" data-i="${i}" data-k="v" value="${g.v}" aria-label="Vitesse"><span>km/h</span></label></div>
       <div class="big" id="mt${i}"></div>
       <div class="sbar dim"><span>Distance</span><div class="tr"><b id="mbd${i}"></b></div><span id="mpd${i}"></span></div>
       <div class="sbar"><span>Temps</span><div class="tr"><b id="mbt${i}"></b></div><span id="mpt${i}"></span></div></div>`).join('');
@@ -526,7 +536,8 @@ function renderMoy(){
     $('#mbd'+i).style.width=pd+'%';$('#mpd'+i).textContent=Math.round(pd)+' %';
     $('#mbt'+i).style.width=pt+'%';$('#mpt'+i).textContent=Math.round(pt)+' %';
     box.children[i].classList.toggle('sel',mSel===i);
-    const vin=box.querySelector(`input[data-i="${i}"][data-k="v"]`);if(vin&&document.activeElement!==vin)vin.value=g.v;});
+    const vin=box.querySelector(`input[data-i="${i}"][data-k="v"]`);if(vin&&document.activeElement!==vin)vin.value=g.v;
+    const din=box.querySelector(`input[data-i="${i}"][data-k="d"]`);if(din&&document.activeElement!==din)din.value=fv(g.d);});
   $('#m-add').hidden=segs.length>=6;
   // verdict
   const V=$('#m-verdict');
@@ -550,28 +561,31 @@ function renderMoy(){
 /* ---------- 4. Freinage ---------- */
 let fScale=0,fDrag=false;
 $('#f-tr').oninput=e=>{S.fr.tr=+e.target.value;renderFrein();save();};
-$('#f-obs').oninput=e=>{const v=+e.target.value;if(v>0){S.fr.obs=v;renderFrein();save();}};
+$('#f-obs').oninput=e=>{const v=pn(e.target.value);if(v>0){S.fr.obs=v;renderFrein();save();}};
 $$('#f-a button').forEach(b=>b.onclick=()=>{S.fr.a=+b.dataset.a;renderFrein();save();});
 const stopD=v=>{const ms=v/3.6,F=S.fr,dr=ms*F.tr,df=ms*ms/(2*F.a);return{dr,df,D:dr+df,t:F.tr+ms/F.a,ms};};
 function renderFrein(){
-  const F=S.fr;$('#f-tr').value=F.tr;if(document.activeElement!==$('#f-obs'))$('#f-obs').value=F.obs;$('#f-trv').textContent=nf(F.tr,1)+' s';
+  const F=S.fr;$('#f-tr').value=F.tr;if(document.activeElement!==$('#f-obs'))$('#f-obs').value=fv(F.obs);$('#f-trv').textContent=nf(F.tr,1)+' s';
   $$('#f-a button').forEach(b=>b.classList.toggle('on',+b.dataset.a===F.a));
   const v=valid(),data={};v.forEach(s=>data[s.i]=stopD(s.v));
   if(!fDrag)fScale=Math.max(40,F.obs*1.25,...Object.values(data).map(d=>d.D*1.08));
   const P=x=>Math.min(100,x/fScale*100).toFixed(2)+'%';
   const st=niceStep(fScale,6);let ticks='';for(let m=0;m<=fScale;m+=st)ticks+=`<i style="left:${P(m)}"></i><span style="left:${P(m)}">${nf(m)} m</span>`;
-  const sample=S.speeds[0]||{v:50,c:PAL[0]};
-  $('#f-lanes').innerHTML=`<div class="ruler-row"><div class="ghost">${speedCtl(sample,0).replace(/data-i/g,'data-x').replace(/class="(vin|cin|sb)"/g,'tabindex="-1"')}</div>
-      <div class="ruler" id="f-ruler" aria-label="Distance de l’obstacle"><div class="ticks">${ticks}</div><div class="knob" style="left:${P(F.obs)}">Obstacle ${nf(F.obs)} m</div></div>
+  const box=$('#f-lanes'),fkey=S.speeds.map(x=>x.c).join();
+  if(box.dataset.key!==fkey){box.dataset.key=fkey;
+    const sample=S.speeds[0]||{v:50,c:PAL[0]};
+    box.innerHTML=`<div class="ruler-row"><div class="ghost">${speedCtl(sample,0).replace(/data-i/g,'data-x').replace(/class="(vin|cin|sb)"/g,'tabindex="-1"')}</div>
+      <div class="ruler" id="f-ruler" aria-label="Distance de l’obstacle"><div class="ticks" id="f-ticks"></div><div class="knob" id="f-knob"></div></div>
       <div class="ghost v"></div><div></div></div>`+
-    S.speeds.map((s,i)=>{const d=data[i];let pill='',val='—',det='';
-      if(d){val=nf(d.D)+' m';
-        if(d.D<=F.obs)pill=`<span class="pill ok">S’arrête · marge ${nf(F.obs-d.D)} m</span>`;
-        else{const rem=F.obs-d.dr;const vi=rem<=0?s.v:Math.sqrt(Math.max(0,d.ms*d.ms-2*F.a*rem))*3.6;pill=`<span class="pill bad">Choc à ${nf(vi)} km/h</span>`;}
-        det=`title="Réaction ${nf(d.dr)} m · freinage ${nf(d.df)} m · arrêt en ${nf(d.t,1)} s"`;}
-      return `<div class="blane" style="--c:${s.c}">${speedCtl(s,i)}
-        <div class="btrack" ${det}>${d?`<div class="br" style="width:${P(d.dr)}"></div><div class="bf" style="left:${P(d.dr)};width:${P(d.df)}"></div>`:''}<div class="wall" style="left:${P(F.obs)}"></div></div>
-        <div class="val"><b>${val}</b>${pill}${d?`<small>${nf(d.dr)} réaction + ${nf(d.df)} freinage</small>`:''}</div>${rmBtn(i)}</div>`;}).join('')+addBtn();
+      S.speeds.map((s,i)=>`<div class="blane" style="--c:${s.c}">${speedCtl(s,i)}<div class="btrack" id="fb${i}"></div><div class="val" id="fv${i}"></div>${rmBtn(i)}</div>`).join('')+addBtn();}
+  $('#f-ticks').innerHTML=ticks;const kn=$('#f-knob');kn.style.left=P(F.obs);kn.textContent='Obstacle '+nf(F.obs)+' m';
+  syncRings(box);
+  S.speeds.forEach((s,i)=>{const d=data[i],tr=$('#fb'+i),vl=$('#fv'+i);if(!tr)return;let pill='',val='—';
+    if(d){val=nf(d.D)+' m';
+      if(d.D<=F.obs)pill=`<span class="pill ok">S’arrête · marge ${nf(F.obs-d.D)} m</span>`;
+      else{const rem=F.obs-d.dr;const vi=rem<=0?s.v:Math.sqrt(Math.max(0,d.ms*d.ms-2*F.a*rem))*3.6;pill=`<span class="pill bad">Choc à ${nf(vi)} km/h</span>`;}}
+    tr.innerHTML=(d?`<div class="br" style="width:${P(d.dr)}"></div><div class="bf" style="left:${P(d.dr)};width:${P(d.df)}"></div>`:'')+`<div class="wall" style="left:${P(F.obs)}"></div>`;
+    vl.innerHTML=`<b>${val}</b>${pill}${d?`<small>${nf(d.dr)} m réaction + ${nf(d.df)} m freinage</small>`:''}`;});
   // verdict
   const s=sorted(),V=$('#f-verdict');if(!s.length){V.textContent='';return;}
   const okS=s.filter(x=>stopD(x.v).D<=F.obs),bad=s.filter(x=>stopD(x.v).D>F.obs);
@@ -597,7 +611,7 @@ const TABS=['course','rendement','moyenne','freinage'];
 function setTab(t){if(!TABS.includes(t))t='course';
   $$('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
   TABS.forEach(x=>$('#p-'+x).hidden=x!==t);
-  if(t!=='course')stopRace();if(t==='rendement')renderRend();S.tab=t;save();}
+  if(t!=='course')stopRace();if(t==='rendement')renderRend();if(t==='moyenne')renderMoy();S.tab=t;save();}
 $$('.tab').forEach(b=>b.onclick=()=>{setTab(b.dataset.tab);window.scrollTo({top:0});});
 
 function renderAll(){renderCourse();renderRend();renderMoy();renderFrein();save();}
