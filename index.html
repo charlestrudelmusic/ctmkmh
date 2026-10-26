@@ -73,6 +73,7 @@ button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid va
 .num{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid color-mix(in srgb,var(--tab) 40%,var(--line));border-radius:12px;padding:4px 10px;font-weight:800}
 .num input{width:4.2ch;border:0;background:transparent;font:inherit;font-size:1.05rem;color:var(--tab);text-align:right;-moz-appearance:textfield}
 .num input:focus{outline:none}
+.num input::placeholder,.ring input::placeholder{color:var(--muted);opacity:.45}
 .num span{color:var(--muted);font-weight:600;font-size:.88rem}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .seg{display:inline-flex;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:12px;gap:2px;flex-wrap:nowrap;max-width:100%}
@@ -328,6 +329,11 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.classList.contains('cin')){S.speeds[+t.dataset.i].c=t.value;renderAll();}
 });
+/* Champs numériques : la case se vide quand on la touche ; si on sort sans rien taper, l'ancienne valeur revient */
+const isNum=el=>el&&el.tagName==='INPUT'&&el.hasAttribute('inputmode');
+document.addEventListener('focusin',e=>{const el=e.target;if(!isNum(el))return;el.dataset.prev=el.value;el.placeholder=el.value;el.value='';},true);
+document.addEventListener('input',e=>{const el=e.target;if(isNum(el)&&el.value.trim()===''){e.stopImmediatePropagation();}},true);
+document.addEventListener('focusout',e=>{const el=e.target;if(!isNum(el))return;el.placeholder='';if(el.value.trim()==='')el.value=el.dataset.prev||'';else if(el.classList.contains('vin'))renderAll();},true);
 /* −/+ : 1 km/h par toucher ; en maintenant, ça défile puis passe à 10 km/h */
 function bump(b,step){const s=S.speeds[+b.dataset.i];if(!s)return;const dir=Math.sign(+b.dataset.act);
   s.v=step===1?s.v+dir:(dir>0?Math.floor(s.v/10)*10+10:Math.ceil(s.v/10)*10-10);
